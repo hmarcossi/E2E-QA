@@ -1,0 +1,35 @@
+{
+  "name": "serverest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "open:dev": "cypress open --env ENV=dev",
+    "headless:dev": "cypress run --env ENV=dev",
+    "api:dev": "npm run headless:dev -- --spec 'cypress/e2e/backend'",
+    "ui:dev": "npm run headless:dev -- --spec 'cypress/e2e/frontend'",
+    "k6:setup": "npx cypress run --spec './cypress/k6/*.js'",
+    "k6:run": "k6 run  ./cypress/k6/scripts/*.js --out json=./cypress/test_reports/k6/load_result.json"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cypress": "^14.4.0",
+    "cypress-grep": "^2.6.1",
+    "cypress-iframe": "^1.0.1",
+    "fs": "^0.0.1-security",
+    "genson-js": "^0.0.8"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^8.0.2",
+    "cypress-cucumber-preprocessor": "^4.3.1",
+    "k6-html-reporter": "^1.0.5",
+    "mochawesome": "^7.1.3",
+    "mochawesome-merge": "^5.0.0",
+    "mochawesome-report-generator": "^6.2.0"
+  },
+  "cypress-cucumber-preprocessor": {
+    "nonGlobalStepDefinitions": true,
+    "stepDefinitions": "cypress/e2e/frontend/step_definitions"
+  }
+}

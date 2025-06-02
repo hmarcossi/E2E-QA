@@ -1,0 +1,28 @@
+{
+    "env": {
+        "serverest": {
+            "baseUrl": "https://front.serverest.dev",
+            "apiUrl": "https://serverest.dev",
+            "frontEnd": {
+                "admin": {
+                    "email": "fulanooo@qa.com",
+                    "senha": "teste"
+                },
+                "user": {
+                    "email": "",
+                    "senha": ""
+                }
+            },
+            "backEnd": {
+                "admin": {
+                    "email": "fulano@qa.com",
+                    "senha": "teste"
+                },
+                "user": {
+                    "email": "",
+                    "senha": ""
+                }
+            }
+        }
+    }
+}
