@@ -1,0 +1,5 @@
+robotframework
+Appium-Python-Client
+robotframework-appiumlibrary
+robotframework-faker
+allure-robotframework

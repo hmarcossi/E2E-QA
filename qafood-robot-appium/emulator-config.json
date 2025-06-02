@@ -1,0 +1,8 @@
+{
+    "avdName": "test_avd",
+    "device": "pixel_4",
+    "apiLevel": "30",
+    "arch": "x86_64",
+    "forceAvdCreation": false,
+    "emulatorOptions": "-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim"
+}
