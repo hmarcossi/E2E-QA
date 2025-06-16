@@ -25,8 +25,8 @@ Cypress.Commands.add('createUserGetToken', (nomeUser, emailUser, passUser, admin
     const payload = generateUserPayloadCreate(nomeUser, emailUser, passUser, admin);
     return cy.createUser(apiUrl, endPoint, payload) .then(() => {
       return cy.login(emailUser, passUser).then((response) => {
-        const token = response.body['authorization']; // Extrai o token
-        return Cypress.Promise.resolve({token}); // Retorna o token como uma Promise resolvida
+        const token = response.body['authorization'];
+        return Cypress.Promise.resolve({token});
           });
       });
     });

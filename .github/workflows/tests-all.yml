@@ -1,88 +1,98 @@
-name: Executar Todos os Testes
+name: Testes de Qualidade ServeRest (Monorepo)
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
 
 jobs:
-
-  testes-backend:
+  setup-environment:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ServeRest-Cypress
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout do Código
+        uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Instalar dependências
+      - name: Instalar Dependências do Monorepo
         run: npm install
 
-      - name: Criar diretório de relatórios
-        run: mkdir -p cypress/test_reports
+  backend-api-tests:
+    runs-on: ubuntu-latest
+    needs: setup-environment
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
 
-      - name: Executar testes Backend com Cypress
-        run: npx cypress run --spec "cypress/e2e/backend/**/*.cy.js"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Mesclar relatórios Mochawesome
-        run: npx mochawesome-merge cypress/test_reports/*.json > cypress/test_reports/backend-report.json
+      - name: Instalar Dependências (Cache)
+        run: npm install
 
-      - name: Gerar relatório HTML Mochawesome
-        run: npx marge cypress/test_reports/backend-report.json -f backend-report -o cypress/test_reports
+      - name: Executar Testes de Backend (Cypress API)
+        run: npm run api:dev
+        env:
+          CYPRESS_ADMIN_EMAIL: ${{ secrets.BACKEND_ADMIN_EMAIL }}
+          CYPRESS_ADMIN_PASSWORD: ${{ secrets.BACKEND_ADMIN_PASSWORD }}
 
-      - name: Fazer upload do relatório de testes Backend
+      - name: Gerar Relatório HTML Backend
+        run: npm run generate:backend-report
+        if: always()
+
+      - name: Publicar Relatório Backend
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: relatorio-testes-backend
-          path: ServeRest-Cypress/cypress/test_reports/**/*
-  
-  testes-frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ServeRest-Cypress
-    steps:
-      - uses: actions/checkout@v4
+          path: mochawesome-report/backend-report.html
 
-      - name: Configurar Node.js
+  frontend-e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [setup-environment, backend-api-tests]
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Instalar dependências
+      - name: Instalar Dependências (Cache)
         run: npm install
 
-      - name: Criar diretório de relatórios
-        run: mkdir -p cypress/test_reports
+      - name: Executar Testes de Frontend (Cypress E2E)
+        run: npm run ui:dev
+        env:
+          CYPRESS_DEFAULT_USER_EMAIL: ${{ secrets.FRONTEND_DEFAULT_USER_EMAIL }}
+          CYPRESS_DEFAULT_USER_PASSWORD: ${{ secrets.FRONTEND_DEFAULT_USER_PASSWORD }}
 
-      - name: Executar testes Frontend com Cypress
-        run: npx cypress run --spec "cypress/e2e/frontend/**/*.cy.js"
+      - name: Gerar Relatório HTML Frontend
+        run: npm run generate:frontend-report
+        if: always()
 
-      - name: Mesclar relatórios Mochawesome
-        run: npx mochawesome-merge cypress/test_reports/*.json > cypress/test_reports/frontend-report.json
-
-      - name: Gerar relatório HTML Mochawesome
-        run: npx marge cypress/test_reports/frontend-report.json -f frontend-report -o cypress/test_reports
-
-      - name: Fazer upload do relatório de testes Frontend
+      - name: Publicar Relatório Frontend
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: relatorio-testes-frontend
-          path: ServeRest-Cypress/cypress/test_reports/**/*
+          path: mochawesome-report/frontend-report.html
 
-  testes-carga:
+  performance-tests:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ServeRest-Cypress
+    needs: [setup-environment, backend-api-tests]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout do Código
+        uses: actions/checkout@v4
 
       - name: Instalar K6
         run: |
@@ -91,63 +101,75 @@ jobs:
             cut -d '"' -f 4 | wget -qi -
           tar -xzf k6-v*-linux-amd64.tar.gz
           sudo mv k6-v*-linux-amd64/k6 /usr/local/bin
+          k6 version
 
-      - name: Criar diretório de relatórios
-        run: mkdir -p cypress/test_reports/k6
-      
-      - name: Configurar Node.js
+      - name: Setup Node.js (para generate_k6_report.js)
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Instalar dependências
+      - name: Instalar Dependências (Cache)
         run: npm install
 
-      - name: Gerar massa de dados
-        run: |
-          npx cypress run --spec ./cypress/k6/*.js
+      - name: (Opcional) Executar Setup de Dados K6 (Cypress)
+        run: npm run k6:setup
+        env:
+          CYPRESS_ADMIN_EMAIL: ${{ secrets.BACKEND_ADMIN_EMAIL }}
+          CYPRESS_ADMIN_PASSWORD: ${{ secrets.BACKEND_ADMIN_PASSWORD }}
 
-      - name: Executar teste de carga com K6
-        run: |
-          k6 run cypress/k6/scripts/api-load-test.js \
-            --summary-export=cypress/test_reports/k6/load_result.json
+      - name: Executar Testes de Carga (K6)
+        run: npm run k6:run
+        env:
+          K6_API_URL: https://serverest.dev
+          K6_FRONTEND_URL: https://front.serverest.dev
 
-      - name: Fazer upload do relatório de teste de carga
+      - name: Gerar Relatório HTML do K6
+        run: npm run generate:k6-report
+        if: always()
+
+      - name: Publicar Relatório K6
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: relatorio-teste-carga
-          path: ServeRest-Cypress/cypress/test_reports/k6/**/*
+          path: performance-tests/test_reports/k6/k6_report.html
 
   resumo-relatorios:
     runs-on: ubuntu-latest
-    needs: [testes-backend, testes-frontend, testes-carga]
+    needs: [backend-api-tests, frontend-e2e-tests, performance-tests]
+    if: always()
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js para script de consolidação
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download Relatório Backend
+        uses: actions/download-artifact@v4
         with:
           name: relatorio-testes-backend
-          path: resumo/backend
+          path: consolidated_reports/backend
 
-      - uses: actions/download-artifact@v4
+      - name: Download Relatório Frontend
+        uses: actions/download-artifact@v4
         with:
           name: relatorio-testes-frontend
-          path: resumo/frontend
+          path: consolidated_reports/frontend
 
-      - uses: actions/download-artifact@v4
+      - name: Download Relatório Teste de Carga
+        uses: actions/download-artifact@v4
         with:
           name: relatorio-teste-carga
-          path: resumo/carga
+          path: consolidated_reports/performance
 
-      - name: Criar índice de resumo
-        run: |
-          echo "<html><body><h1>Resumo dos Testes</h1>" > resumo/index.html
-          echo "<ul>" >> resumo/index.html
-          echo "<li><a href='./backend/backend-report.html'>Relatório Backend</a></li>" >> resumo/index.html
-          echo "<li><a href='./frontend/frontend-report.html'>Relatório Frontend</a></li>" >> resumo/index.html
-          echo "<li><a href='./carga/load_result.json'>Relatório Teste de Carga</a></li>" >> resumo/index.html
-          echo "</ul></body></html>" >> resumo/index.html
-
+      - name: Gerar Relatório Consolidado
+        run: npm run generate:consolidated-report
+      
       - name: Fazer upload do resumo consolidado
         uses: actions/upload-artifact@v4
         with:
-          name: resumo-testes
-          path: resumo/**
+          name: resumo-testes-consolidado
+          path: consolidated_reports/**

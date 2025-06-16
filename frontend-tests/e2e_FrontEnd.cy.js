@@ -1,7 +1,7 @@
-import loginPage from "../../pages/LoginPage"
-import homeAdminPage from "../../pages/HomeAdminPage"
-import createUserPage from "../../pages/CreateUserPage"
-import creatProductPage from "../../pages/CreatProductPage"
+import loginPage from "../pages/LoginPage"
+import homeAdminPage from "../pages/HomeAdminPage"
+import createUserPage from "../pages/CreateUserPage"
+import creatProductPage from "../pages/CreatProductPage"
 
 import { faker } from "@faker-js/faker"
 

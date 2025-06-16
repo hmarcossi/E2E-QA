@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { generateUserPayloadCreate } from '../../factories/createUserPayload';
-import { generateProductPayloadCreate } from '../../factories/createProductPayload';
+import { generateUserPayloadCreate } from '../factories/createUserPayload';
+import { generateProductPayloadCreate } from '../factories/createProductPayload';
 
 describe('Testes E2E de Produto', () => {
     const apiUrl = `${Cypress.env("serverest").apiUrl}`;
