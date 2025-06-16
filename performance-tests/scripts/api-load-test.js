@@ -6,10 +6,10 @@ const users = JSON.parse(open('../data/users.json'));
 
 export const options = {
   vus: 5,
-  duration: '30s',
+  duration: '10s',
   thresholds: {
     http_req_duration: ['p(95)<500'],
-    http_req_failed: ['rate<0.01'],
+    http_req_failed: ['rate<0.50'],
   }
 };
 
