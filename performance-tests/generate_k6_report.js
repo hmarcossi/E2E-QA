@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { generateReport } = require('k6-html-reporter');
+const k6HtmlReporter = require('k6-html-reporter');
 
 const inputPath = path.join(__dirname, 'test_reports', 'k6', 'load_result.json');
 const outputPath = path.join(__dirname, 'test_reports', 'k6');
@@ -15,8 +15,9 @@ const reporterOptions = {
     output: outputPath,
     filename: 'k6_report.html',
     title: 'ServeRest K6 Load Test Report',
+
 };
 
-generateReport(reporterOptions);
+k6HtmlReporter.generate(reporterOptions);
 
 console.log(`Relatório HTML do K6 gerado em: ${path.join(outputPath, 'k6_report.html')}`);
