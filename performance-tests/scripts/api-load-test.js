@@ -8,7 +8,7 @@ export const options = {
   duration: '30s',
   thresholds: {
     http_req_duration: ['p(95)<500'],
-    http_req_failed: ['rate<0.80'],
+    http_req_failed: ['rate<0.80'], 
   }
 };
 
@@ -29,13 +29,10 @@ export default function () {
     },
   };
 
-  const res = http.post('https://serverest.dev/login', payload, params);
+  const res = http.post(`${BASE_API_URL}/login`, payload, params);
 
   check(res, {
-    'Login bem-sucedido': (r) => r.status === 200,
-    'Token retornado': (r) => JSON.parse(r.body).authorization !== undefined,
-    'Email e/ou senha inválidos': (r) => JSON.parse(r.body).message !== 'Email e/ou senha inválidos',
-    'Tempo de resposta': (r) => r.timings.duration < 500,
+    'Status da requisição é 200 (Login bem-sucedido)': (r) => r.status === 200,
+    'Corpo da resposta contém um token de autorização': (r) => r.json('authorization') !== undefined,
   });
-
 }

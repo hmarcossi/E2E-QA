@@ -1,4 +1,4 @@
-name: Testes de Qualidade ServeRest (Monorepo)
+name: Pipeline de Testes de Qualidade
 
 on:
   push:
@@ -9,44 +9,46 @@ on:
       - main
 
 jobs:
-  setup-environment:
+  setup-and-cache:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Repositório
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js v20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Instalar Dependências do Monorepo
+      - name: Instalar Dependências
         run: npm install
 
   backend-api-tests:
     runs-on: ubuntu-latest
-    needs: setup-environment
+    needs: setup-and-cache
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Repositório
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js v20 com Cache
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Instalar Dependências (Cache)
+      - name: Instalar Dependências do Cache
         run: npm install
 
-      - name: Executar Testes de Backend (Cypress API)
+      - name: Executar Testes de Backend (API)
         run: npm run api:dev
         env:
           CYPRESS_ADMIN_EMAIL: ${{ secrets.BACKEND_ADMIN_EMAIL }}
           CYPRESS_ADMIN_PASSWORD: ${{ secrets.BACKEND_ADMIN_PASSWORD }}
 
       - name: Gerar Relatório HTML Backend
-        run: npm run generate:backend-report
         if: always()
+        run: npm run generate:backend-report
 
       - name: Publicar Relatório Backend
         uses: actions/upload-artifact@v4
@@ -57,28 +59,29 @@ jobs:
 
   frontend-e2e-tests:
     runs-on: ubuntu-latest
-    needs: [setup-environment, backend-api-tests]
+    needs: [setup-and-cache, backend-api-tests]
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Repositório
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js v20 com Cache
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Instalar Dependências (Cache)
+      - name: Instalar Dependências do Cache
         run: npm install
 
-      - name: Executar Testes de Frontend (Cypress E2E)
+      - name: Executar Testes de Frontend (E2E)
         run: npm run ui:dev
         env:
           CYPRESS_DEFAULT_USER_EMAIL: ${{ secrets.FRONTEND_DEFAULT_USER_EMAIL }}
           CYPRESS_DEFAULT_USER_PASSWORD: ${{ secrets.FRONTEND_DEFAULT_USER_PASSWORD }}
 
       - name: Gerar Relatório HTML Frontend
-        run: npm run generate:frontend-report
         if: always()
+        run: npm run generate:frontend-report
 
       - name: Publicar Relatório Frontend
         uses: actions/upload-artifact@v4
@@ -89,23 +92,24 @@ jobs:
 
   performance-tests:
     runs-on: ubuntu-latest
-    needs: [setup-environment, backend-api-tests]
+    needs: [setup-and-cache, backend-api-tests]
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Repositório
         uses: actions/checkout@v4
 
       - name: Setup K6
         uses: grafana/setup-k6-action@v1
         
-      - name: Setup Node.js
+      - name: Setup Node.js v20 com Cache
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Instalar Dependências (Cache)
+      - name: Instalar Dependências do Cache
         run: npm install
 
-      - name: Executar Setup de Dados K6 (Cypress)
+      - name: Setup de Dados para K6 (via Cypress)
         run: npm run k6:setup
         env:
           CYPRESS_ADMIN_EMAIL: ${{ secrets.BACKEND_ADMIN_EMAIL }}
@@ -113,20 +117,15 @@ jobs:
 
       - name: Criar Diretório de Relatórios K6
         run: mkdir -p performance-tests/test_reports/k6/
-
-      - name: Executar Testes de Carga (K6) e Exportar Resumo
-        run: |
-          k6 run performance-tests/scripts/api-load-test.js \
-          --summary-export=performance-tests/test_reports/k6/load_result.json \
-          --env K6_API_URL=${{ env.K6_API_URL }} \
-          --env K6_FRONTEND_URL=${{ env.K6_FRONTEND_URL }}
+    
+      - name: Executar Testes de Carga (K6)
+        run: npm run k6:run
         env:
           K6_API_URL: https://serverest.dev
-          K6_FRONTEND_URL: https://front.serverest.dev
 
       - name: Gerar Relatório HTML do K6
-        run: npm run generate:k6-report
         if: always()
+        run: npm run generate:k6-report
 
       - name: Publicar Relatório K6
         uses: actions/upload-artifact@v4
@@ -140,31 +139,30 @@ jobs:
     needs: [backend-api-tests, frontend-e2e-tests, performance-tests]
     if: always()
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Repositório
         uses: actions/checkout@v4
-      - name: Setup Node.js para script de consolidação
+        
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Download Relatório Backend
+
+      - name: Download dos Artefatos de Relatório
         uses: actions/download-artifact@v4
-        with:
-          name: relatorio-testes-backend
-          path: consolidated_reports/backend
-      - name: Download Relatório Frontend
-        uses: actions/download-artifact@v4
-        with:
-          name: relatorio-testes-frontend
-          path: consolidated_reports/frontend
-      - name: Download Relatório Teste de Carga
-        uses: actions/download-artifact@v4
-        with:
-          name: relatorio-teste-carga
-          path: consolidated_reports/performance
-      - name: Gerar Relatório Consolidado
-        run: node scripts/generate_consolidated_report.js
-      - name: Fazer upload do resumo consolidado
+        
+      - name: Organizar Relatórios e Gerar Dashboard
+        run: |
+          # Cria a estrutura de pastas esperada pelo script
+          mkdir -p consolidated_reports
+          mv relatorio-testes-backend consolidated_reports/backend
+          mv relatorio-testes-frontend consolidated_reports/frontend
+          mv relatorio-teste-carga consolidated_reports/performance
+          
+          # Executa o script que cria o index.html
+          npm run generate:consolidated-report
+          
+      - name: Fazer upload do Resumo Consolidado
         uses: actions/upload-artifact@v4
         with:
           name: resumo-testes-consolidado
-          path: consolidated_reports/**
+          path: consolidated_reports/

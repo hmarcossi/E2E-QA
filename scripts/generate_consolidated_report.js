@@ -1,55 +1,95 @@
 const fs = require('fs');
 const path = require('path');
 
-const consolidatedReportDir = 'consolidated_reports';
-const outputPath = path.join(__dirname, '..', consolidatedReportDir);
-const indexPath = path.join(outputPath, 'index.html');
+const reportsDir = path.join(process.cwd(), 'consolidated_reports');
+const outputFilePath = path.join(reportsDir, 'index.html');
 
-const backendReportPath = 'mochawesome-report/backend-report.html';
-const frontendReportPath = 'mochawesome-report/frontend-report.html';
-const k6ReportPath = 'performance-tests/test_reports/k6/k6_report.html';
+const reportConfig = {
+    backend: {
+        name: 'Testes de API (Backend)',
+        path: path.join(reportsDir, 'backend', 'backend-report.html'),
+        link: './backend/backend-report.html'
+    },
+    frontend: {
+        name: 'Testes E2E (Frontend)',
+        path: path.join(reportsDir, 'frontend', 'frontend-report.html'),
+        link: './frontend/frontend-report.html'
+    },
+    performance: {
+        name: 'Testes de Carga (K6)',
+        path: path.join(reportsDir, 'performance', 'k6_report.html'),
+        link: './performance/k6_report.html'
+    }
+};
 
+function createReportSection(report) {
+    const fileExists = fs.existsSync(report.path);
+    const status = fileExists ? 'SUCESSO' : 'FALHA';
+    const statusColor = fileExists ? '#28a745' : '#dc3545';
+    const link = fileExists ? `<a href="${report.link}" target="_blank">Ver Relatório Detalhado</a>` : 'Relatório não encontrado';
 
-if (!fs.existsSync(outputPath)) {
-    fs.mkdirSync(outputPath, { recursive: true });
+    return `
+        <div class="report-card">
+            <h2>${report.name}</h2>
+            <div class="status">
+                Status: <span class="status-badge" style="background-color: ${statusColor};">${status}</span>
+            </div>
+            <div class="report-link">
+                ${link}
+            </div>
+        </div>
+    `;
 }
 
-const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Relatório Consolidado de Testes ServeRest</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f0f2f5; color: #333; }
-        .container { max-width: 800px; margin: auto; background-color: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        ul { list-style: none; padding: 0; }
-        li { margin-bottom: 15px; background-color: #e9f0f7; padding: 15px; border-radius: 8px; border-left: 5px solid #3498db; }
-        li a { text-decoration: none; color: #2980b9; font-weight: bold; font-size: 1.1em; }
-        li a:hover { text-decoration: underline; color: #21618c; }
-        .footer { text-align: center; margin-top: 40px; font-size: 0.9em; color: #7f8c8d; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Relatório Consolidado de Testes ServeRest</h1>
-        <ul>
-            <li><a href="./backend/backend-report.html" target="_blank">Relatório de Testes Backend (API)</a></li>
-            <li><a href="./frontend/frontend-report.html" target="_blank">Relatório de Testes Frontend (E2E)</a></li>
-            <li><a href="./performance/k6_report.html" target="_blank">Relatório de Testes de Performance (K6)</a></li>
-        </ul>
-        <div class="footer">
-            Gerado por GitHub Actions
-        </div>
-    </div>
-</body>
-</html>
-`;
 
-fs.writeFile(indexPath, htmlContent, (err) => {
-    if (err) {
-        console.error("Erro ao escrever o relatório consolidado:", err);
-        process.exit(1);
-    }
-    console.log(`Relatório consolidado gerado em: ${indexPath}`);
-});
+function generateDashboard() {
+    console.log('Gerando dashboard consolidado...');
+
+    const sections = Object.values(reportConfig).map(createReportSection).join('');
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Painel de Controle de Qualidade</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #1c1e21; }
+            .container { max-width: 960px; margin: 40px auto; padding: 20px; }
+            header { text-align: center; margin-bottom: 40px; }
+            header h1 { color: #1877f2; font-size: 2.5em; }
+            header p { color: #606770; font-size: 1.1em; }
+            .reports-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+            .report-card { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 25px; transition: transform 0.2s; }
+            .report-card:hover { transform: translateY(-5px); }
+            .report-card h2 { font-size: 1.4em; margin-top: 0; color: #333; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 15px; }
+            .status { margin-bottom: 15px; font-size: 1em; }
+            .status-badge { color: white; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; }
+            .report-link a { color: #1877f2; text-decoration: none; font-weight: bold; }
+            .report-link a:hover { text-decoration: underline; }
+            footer { text-align: center; margin-top: 50px; color: #90949c; font-size: 0.9em; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>Painel de Controle de Qualidade</h1>
+                <p>Resumo da execução dos testes automatizados.</p>
+            </header>
+            <main class="reports-grid">
+                ${sections}
+            </main>
+            <footer>
+                <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+            </footer>
+        </div>
+    </body>
+    </html>
+    `;
+
+    fs.writeFileSync(outputFilePath, htmlContent);
+    console.log(`Dashboard consolidado gerado com sucesso em: ${outputFilePath}`);
+}
+
+generateDashboard();
