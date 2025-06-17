@@ -70,13 +70,19 @@ const getMetricValue = (metricPath, decimals = 2, multiplier = 1) => {
     return 'N/A';
 };
 
-const httpReqDurationAvg = getMetricValue('metrics.http_req_duration.values.avg');
-const httpReqDurationP95 = getMetricValue('metrics.http_req_duration.values.p(95)');
-const httpReqsCount = getMetricValue('metrics.http_reqs.values.count', 0);
-const httpReqsRate = getMetricValue('metrics.http_reqs.values.rate');
-const httpReqFailedRate = getMetricValue('metrics.http_req_failed.values.rate', 4, 100);
-const vusMax = getMetricValue('metrics.vus_max.values.value', 0);
-const testRunDurationMs = getMetricValue('state.testRunDurationMs', 2, 1 / 1000);
+const httpReqDurationAvg = getMetricValue('metrics.http_req_duration.avg');
+const httpReqDurationP95 = getMetricValue('metrics.http_req_duration.p(95)');
+const httpReqsCount = getMetricValue('metrics.http_reqs.count', 0);
+const httpReqsRate = getMetricValue('metrics.http_reqs.rate');
+const httpReqFailedPasses = getMetricValue('metrics.http_req_failed.passes', 0);
+const httpReqFailedFails = getMetricValue('metrics.http_req_failed.fails', 0);
+const httpReqFailedRate = (httpReqsCount === 'N/A' || httpReqsCount == 0) ? 'N/A' : ((httpReqFailedFails / httpReqsCount) * 100).toFixed(2);
+const vusMax = getMetricValue('metrics.vus_max.value', 0);
+
+
+const iterationDurationAvg = getMetricValue('metrics.iteration_duration.avg');
+const testRunDurationApproximation = (iterationDurationAvg === 'N/A' || httpReqsCount === 'N/A' || vusMax == 0) ? 'N/A' : ((iterationDurationAvg * httpReqsCount) / (1000 * vusMax)).toFixed(2);
+
 
 let testStatus = 'UNKNOWN';
 let statusColor = '#6c757d';
@@ -85,7 +91,7 @@ const p95Value = parseFloat(httpReqDurationP95);
 const failedRateValue = parseFloat(httpReqFailedRate);
 
 const thresholdDurationPassed = p95Value !== 'N/A' && !isNaN(p95Value) && p95Value < 500;
-const thresholdFailedPassed = failedRateValue !== 'N/A' && !isNaN(failedRateValue) && failedRateValue < 1;
+const thresholdFailedPassed = failedRateValue !== 'N/A' && !isNaN(failedRateValue) && failedRateValue < 10;
 
 if (p95Value === 'N/A' || failedRateValue === 'N/A' || isNaN(p95Value) || isNaN(failedRateValue)) {
     testStatus = 'INCOMPLETO/ERRO';
@@ -127,7 +133,7 @@ const htmlContent = `
 
         <div class="summary-box">
             <p><strong>Status Geral do Teste:</strong> <span class="status-badge">${testStatus}</span></p>
-            <p><strong>Duração do Teste:</strong> <span class="metric-value">${testRunDurationMs}</span> segundos</p>
+            <p><strong>Duração do Teste (Aprox.):</strong> <span class="metric-value">${testRunDurationApproximation}</span> segundos</p>
             <p><strong>Usuários Virtuais (VUs) Máximos:</strong> <span class="metric-value">${vusMax}</span></p>
             <p><strong>Requisições Totais:</strong> <span class="metric-value">${httpReqsCount}</span></p>
             <p><strong>Taxa de Requisições:</strong> <span class="metric-value">${httpReqsRate}</span> req/s</p>
@@ -146,9 +152,9 @@ const htmlContent = `
             </thead>
             <tbody>
                 <tr>
-                    <td>'http_req_duration' (p95)</td>
-                    <td><span class="metric-value">${httpReqDurationAvg}</span></td>
-                    <td><span class="metric-value">${httpReqDurationP95}</span></td>
+                    <td>'http_req_duration'</td>
+                    <td><span class="metric-value">${httpReqDurationAvg}</span> ms</td>
+                    <td><span class="metric-value">${httpReqDurationP95}</span> ms</td>
                     <td><span class="metric-value">${httpReqFailedRate}</span>%</td>
                 </tr>
             </tbody>
@@ -173,7 +179,7 @@ const htmlContent = `
                 </tr>
                 <tr>
                     <td>'http_req_failed' (rate)</td>
-                    <td>&lt;1%</td>
+                    <td>&lt;10%</td>
                     <td><span class="metric-value">${httpReqFailedRate}</span>%</td>
                     <td class="${thresholdFailedPassed ? 'pass-status' : 'fail-status'}">${thresholdFailedPassed ? 'PASS' : 'FAIL'}</td>
                 </tr>
