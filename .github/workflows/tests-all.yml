@@ -111,7 +111,7 @@ jobs:
       - name: Instalar Dependências (Cache)
         run: npm install
 
-      - name: (Opcional) Executar Setup de Dados K6 (Cypress)
+      - name: Executar Setup de Dados K6 (Cypress)
         run: npm run k6:setup
         env:
           CYPRESS_ADMIN_EMAIL: ${{ secrets.BACKEND_ADMIN_EMAIL }}

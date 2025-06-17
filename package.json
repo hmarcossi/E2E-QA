@@ -13,9 +13,9 @@
     "ui:dev": "npm run headless:dev -- --spec 'frontend-tests/**/*.cy.js' --env CYPRESS_REPORT_GROUP=frontend",
     
     "k6:setup": "npm run headless:dev -- --spec 'performance-tests/scripts/k6_data-setup.cy.js'",
-    "k6:run": "mkdir -p performance-tests/test_reports/k6/ && k6 run performance-tests/scripts/api-load-test.js --out json=performance-tests/test_reports/k6/load_result.json",
+    "k6:run": "mkdir -p performance-tests/test_reports/k6/ && k6 run performance-tests/scripts/api-load-test.js --out json=performance-tests/test_reports/k6/load_result.json > /dev/null",
     
-        "generate:k6-report": "node performance-tests/generate_k6_report.js",
+    "generate:k6-report": "node performance-tests/generate_k6_report.js", 
     
     "generate:backend-report": "mkdir -p mochawesome-report && mochawesome-merge cypress-results/backend/*.json > mochawesome-report/backend-report.json && marge mochawesome-report/backend-report.json -f backend-report -o mochawesome-report",
     "generate:frontend-report": "mkdir -p mochawesome-report && mochawesome-merge cypress-results/frontend/*.json > mochawesome-report/frontend-report.json && marge mochawesome-report/frontend-report.json -f frontend-report -o mochawesome-report",

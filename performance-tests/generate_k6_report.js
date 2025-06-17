@@ -1,13 +1,16 @@
-// performance-tests/generate_k6_report.js
 const fs = require('fs');
 const path = require('path');
 
-const inputPath = path.join(__dirname, 'test_reports', 'k6', 'load_result.json');
-const outputPath = path.join(__dirname, 'test_reports', 'k6'); // Onde o HTML será salvo
+
+const repoRoot = process.cwd();
+const inputPath = path.join(repoRoot, 'performance-tests', 'test_reports', 'k6', 'load_result.json');
+const outputPath = path.join(repoRoot, 'performance-tests', 'test_reports', 'k6');
 const htmlFileName = 'k6_report.html';
 const htmlFilePath = path.join(outputPath, htmlFileName);
 
-// Garante que o diretório de saída exista antes de qualquer operação de escrita
+console.log(`Caminho esperado do JSON de entrada K6: ${inputPath}`);
+console.log(`Caminho esperado do HTML de saída K6: ${htmlFilePath}`);
+
 if (!fs.existsSync(outputPath)) {
     fs.mkdirSync(outputPath, { recursive: true });
 }
@@ -33,9 +36,21 @@ if (!fs.existsSync(inputPath)) {
 }
 
 try {
-    k6Results = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+    const rawJsonContent = fs.readFileSync(inputPath, 'utf8');
+    console.log('Conteúdo RAW do JSON (primeiros 500 chars):', rawJsonContent.substring(0, 500) + (rawJsonContent.length > 500 ? '...' : ''));
+    console.log('Tamanho total do arquivo JSON:', rawJsonContent.length, 'bytes');
+
+    k6Results = JSON.parse(rawJsonContent);
 } catch (e) {
     console.error(`Erro ao ler ou parsear o JSON do K6 em ${inputPath}:`, e);
+    if (e instanceof SyntaxError && typeof e.at === 'number') {
+        const errorPosition = e.at;
+        const contextStart = Math.max(0, errorPosition - 50);
+        const contextEnd = Math.min(rawJsonContent.length, errorPosition + 50);
+        const errorContext = rawJsonContent.substring(contextStart, contextEnd);
+        console.error(`Contexto do erro no JSON (aprox. linha ${rawJsonContent.substring(0, errorPosition).split('\n').length}):`, errorContext);
+    }
+
     const errorHtmlContent = `
         <!DOCTYPE html>
         <html>
@@ -53,7 +68,7 @@ try {
     process.exit(1);
 }
 
-// --- Extração de Métricas (Mais robusta para N/A) ---
+
 const getMetricValue = (metricPath, decimals = 2) => {
     let value = k6Results;
     const parts = metricPath.split('.');
@@ -74,14 +89,13 @@ const httpReqDurationAvg = getMetricValue('metrics.http_req_duration.values.avg'
 const httpReqDurationP95 = getMetricValue('metrics.http_req_duration.values.p(95)');
 const httpReqsCount = getMetricValue('metrics.http_reqs.values.count', 0);
 const httpReqsRate = getMetricValue('metrics.http_reqs.values.rate');
-const httpReqFailedRate = getMetricValue('metrics.http_req_failed.values.rate', 4); // Taxa com mais casas decimais para %
+const httpReqFailedRate = getMetricValue('metrics.http_req_failed.values.rate', 4);
 const vusMax = getMetricValue('metrics.vus.values.value', 0);
 const testRunDurationMs = getMetricValue('state.testRunDurationMs', 2) / 1000;
 
 
-// --- Determinar o status do teste com base nos thresholds ---
 let testStatus = 'UNKNOWN';
-let statusColor = '#6c757d'; // Gray (unknown)
+let statusColor = '#6c757d';
 
 const p95Value = parseFloat(httpReqDurationP95);
 const failedRateValue = parseFloat(httpReqFailedRate);
@@ -91,19 +105,16 @@ const thresholdFailedPassed = failedRateValue !== 'N/A' && failedRateValue < 1; 
 
 if (isNaN(p95Value) || isNaN(failedRateValue)) {
     testStatus = 'INCOMPLETO/ERRO';
-    statusColor = '#ffc107'; // Yellow (warning)
+    statusColor = '#ffc107';
 } else if (thresholdDurationPassed && thresholdFailedPassed) {
     testStatus = 'PASSED';
-    statusColor = '#28a745'; // Green
+    statusColor = '#28a745';
 } else {
     testStatus = 'FAILED';
-    statusColor = '#dc3545'; // Red
+    statusColor = '#dc3545';
 }
 
 
-// --- Conteúdo HTML do relatório ---
-// ATENÇÃO: As crases (backticks) ao redor dos nomes das métricas como 'http_req_duration'
-// foram removidas ou substituídas por aspas simples (') para evitar SyntaxError.
 const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -152,13 +163,33 @@ const htmlContent = `
             </thead>
             <tbody>
                 <tr>
-                    <td>'http_req_duration' (p95)</td> <!-- CORRIGIDO: Aspas simples usadas aqui -->
+                    <td>'http_req_duration' (p95)</td>
+                    <td><span class="metric-value">${httpReqDurationAvg}</span></td>
+                    <td><span class="metric-value">${httpReqDurationP95}</span></td>
+                    <td><span class="metric-value">${httpReqFailedRate}</span>%</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Thresholds Definidos</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Limite</th>
+                    <th>Valor Atual</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>'http_req_duration' (p95)</td>
                     <td>&lt;500ms</td>
                     <td><span class="metric-value">${httpReqDurationP95}</span>ms</td>
                     <td class="${thresholdDurationPassed ? 'pass-status' : 'fail-status'}">${thresholdDurationPassed ? 'PASS' : 'FAIL'}</td>
                 </tr>
                 <tr>
-                    <td>'http_req_failed' (rate)</td> <!-- CORRIGIDO: Aspas simples usadas aqui -->
+                    <td>'http_req_failed' (rate)</td>
                     <td>&lt;1%</td>
                     <td><span class="metric-value">${httpReqFailedRate}</span>%</td>
                     <td class="${thresholdFailedPassed ? 'pass-status' : 'fail-status'}">${thresholdFailedPassed ? 'PASS' : 'FAIL'}</td>
