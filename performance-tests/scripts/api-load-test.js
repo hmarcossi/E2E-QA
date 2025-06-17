@@ -1,7 +1,5 @@
 import http from 'k6/http';
 import { check } from 'k6';
-import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js';
-import { textSummary } from 'https://js.k6.io/k6-summary/0.0.1/index.js';
 
 const users = JSON.parse(open('../data/users.json'));
 
@@ -13,6 +11,7 @@ export const options = {
     http_req_failed: ['rate<0.01'],
   }
 };
+
 const BASE_API_URL = __ENV.K6_API_URL || 'https://serverest.dev';
 
 export default function () {
@@ -45,14 +44,4 @@ export default function () {
     },
     'Tempo de resposta abaixo de 500ms': (r) => r.timings.duration < 500,
   });
-}
-
-
-export function handleSummary(data) {
-  const htmlOutputPath = `./performance-tests/test_reports/k6/k6_report.html`;
-  
-  return {
-    [htmlOutputPath]: htmlReport(data),
-    'stdout': textSummary(data, { indent: ' ', enableColors: true }),
-  };
 }
