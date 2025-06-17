@@ -2,9 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const repoRoot = process.cwd(); // Isso dará '/home/runner/work/E2E-QA/E2E-QA' no Actions
+const repoRoot = process.cwd();
 const inputPath = path.join(repoRoot, 'performance-tests', 'test_reports', 'k6', 'load_result.json');
-const outputPath = path.join(repoRoot, 'performance-tests', 'test_reports', 'k6'); // Onde o HTML será salvo
+const outputPath = path.join(repoRoot, 'performance-tests', 'test_reports', 'k6');
 const htmlFileName = 'k6_report.html';
 const htmlFilePath = path.join(outputPath, htmlFileName);
 
@@ -17,8 +17,8 @@ if (!fs.existsSync(outputPath)) {
     fs.mkdirSync(outputPath, { recursive: true });
 }
 
-let k6Summary = null; // Vamos extrair o summary final
-let k6Metrics = {};    // Para armazenar os valores finais das métricas
+let k6SummaryMetrics = null; // Para armazenar o objeto 'metrics' do RunStatus final
+let k6IndividualMetrics = {}; // Para coletar métricas individuais se o summary não for ideal
 
 if (!fs.existsSync(inputPath)) {
     console.error(`Erro: Arquivo de resultados K6 JSON não encontrado em ${inputPath}.`);
@@ -43,37 +43,25 @@ try {
     const rawJsonLines = fs.readFileSync(inputPath, 'utf8').split('\n');
     
     // Processa cada linha JSON
-    for (const line of rawJsonLines) {
+    for (let i = 0; i < rawJsonLines.length; i++) {
+        const line = rawJsonLines[i];
         if (!line.trim()) continue; // Pula linhas vazias
 
         try {
             const data = JSON.parse(line);
             if (data.type === 'Metric') {
-                // Coleta dados de métricas (valores finais para o resumo)
-                if (data.data && data.data.name && data.data.type === 'trend') {
-                    // Métricas de duração, ex: http_req_duration
-                    k6Metrics[data.data.name] = {
-                        avg: data.data.values.avg,
-                        p95: data.data.values['p(95)']
-                    };
-                } else if (data.data && data.data.name && data.data.type === 'counter') {
-                    // Métricas de contador, ex: http_reqs, http_req_failed
-                     k6Metrics[data.data.name] = {
-                        count: data.data.values.count,
-                        rate: data.data.values.rate
-                    };
-                } else if (data.data && data.data.name && data.data.type === 'gauge') {
-                    // Métricas de gauge, ex: vus
-                    k6Metrics[data.data.name] = {
-                        value: data.data.values.value
-                    };
+                // Coleta dados de métricas individuais, se o summary não tiver todos os detalhes
+                if (data.data && data.data.name) {
+                    k6IndividualMetrics[data.data.name] = data.data.values;
                 }
             } else if (data.type === 'RunStatus' && data.data && data.data.status === 'finished') {
-                // Captura o resumo final da execução
-                k6Summary = data.data;
+                // Captura o resumo final da execução, que contém as métricas agregadas
+                k6SummaryMetrics = data.data.metrics;
+                console.log('--- RunStatus (finished) encontrado ---');
+                console.log('Métricas do RunStatus:', JSON.stringify(k6SummaryMetrics, null, 2));
             }
         } catch (e) {
-            console.warn(`Aviso: Pulando linha não-JSON ou mal formatada no log do K6: ${line.substring(0, 100)}... Erro: ${e.message}`);
+            console.warn(`Aviso (linha ${i + 1}): Pulando linha não-JSON ou mal formatada. Linha: "${line.substring(0, 100)}..." Erro: ${e.message}`);
         }
     }
 
@@ -82,10 +70,10 @@ try {
     const errorHtmlContent = `
         <!DOCTYPE html>
         <html>
-        <head><title>Relatório K6 - Erro de Leitura</title></head>
+        <head><title>Relatório K6 - Erro de Leitura/Parsing</title></head>
         <body>
             <h1>Erro ao Gerar Relatório K6</h1>
-            <p>Não foi possível ler o arquivo JSON de resultados (JSON Lines) em: <code>${inputPath}</code></p>
+            <p>Não foi possível ler ou parsear o arquivo JSON de resultados (JSON Lines) em: <code>${inputPath}</code></p>
             <p>Detalhes do erro: ${e.message}</p>
             <p>Verifique o formato do arquivo.</p>
             <p>Data e Hora da Geração: ${new Date().toISOString()}</p>
@@ -93,25 +81,38 @@ try {
         </html>
     `;
     fs.writeFileSync(htmlFilePath, errorHtmlContent);
+    console.log(`Relatório de erro HTML gerado em: ${htmlFilePath}`);
     process.exit(1);
 }
 
-// --- Extração de Métricas do k6Metrics e k6Summary ---
+// --- Extração de Métricas (Priorizando k6SummaryMetrics) ---
+// Usar k6SummaryMetrics se disponível, caso contrário, tentar k6IndividualMetrics
 const getFinalMetricValue = (metricName, key, decimals = 2, multiplier = 1) => {
-    if (k6Metrics[metricName] && typeof k6Metrics[metricName][key] === 'number') {
-        return (k6Metrics[metricName][key] * multiplier).toFixed(decimals);
+    let value = 'N/A';
+    if (k6SummaryMetrics && k6SummaryMetrics[metricName] && typeof k6SummaryMetrics[metricName].values[key] === 'number') {
+        value = k6SummaryMetrics[metricName].values[key];
+    } else if (k6IndividualMetrics[metricName] && typeof k6IndividualMetrics[metricName][key] === 'number') {
+         // Fallback para métricas individuais se não estiverem no summary (menos comum para avg, p95, rate finais)
+        value = k6IndividualMetrics[metricName][key];
     }
-    return 'N/A';
+
+    if (typeof value === 'number') {
+        return (value * multiplier).toFixed(decimals);
+    }
+    return value;
 };
 
+// Captura a duração do teste do RunStatus, se houver
+const testRunDurationMs = k6SummaryMetrics && k6SummaryMetrics.vus && k6SummaryMetrics.vus.values && typeof k6SummaryMetrics.vus.values.duration === 'number'
+    ? (k6SummaryMetrics.vus.values.duration / 1000).toFixed(2)
+    : 'N/A';
+
 const httpReqDurationAvg = getFinalMetricValue('http_req_duration', 'avg');
-const httpReqDurationP95 = getFinalMetricValue('http_req_duration', 'p95');
+const httpReqDurationP95 = getFinalMetricValue('http_req_duration', 'p(95)');
 const httpReqsCount = getFinalMetricValue('http_reqs', 'count', 0);
 const httpReqsRate = getFinalMetricValue('http_reqs', 'rate');
 const httpReqFailedRate = getFinalMetricValue('http_req_failed', 'rate', 4, 100); // Para converter para porcentagem
-const vusMax = getFinalMetricValue('vus', 'value', 0);
-const testRunDurationMs = k6Summary && k6Summary.testRunDurationMs ? (k6Summary.testRunDurationMs / 1000).toFixed(2) : 'N/A';
-
+const vusMax = getFinalMetricValue('vus', 'value', 0); // VUS final, não a duração total
 
 // --- Determinar o status do teste com base nos thresholds ---
 let testStatus = 'UNKNOWN';
@@ -120,10 +121,10 @@ let statusColor = '#6c757d'; // Gray (unknown)
 const p95Value = parseFloat(httpReqDurationP95);
 const failedRateValue = parseFloat(httpReqFailedRate);
 
-const thresholdDurationPassed = p95Value !== 'N/A' && p95Value < 500;
-const thresholdFailedPassed = failedRateValue !== 'N/A' && failedRateValue < 1; // 1%
+const thresholdDurationPassed = p95Value !== 'N/A' && !isNaN(p95Value) && p95Value < 500;
+const thresholdFailedPassed = failedRateValue !== 'N/A' && !isNaN(failedRateValue) && failedRateValue < 1; // 1%
 
-if (isNaN(p95Value) || isNaN(failedRateValue)) {
+if (p95Value === 'N/A' || failedRateValue === 'N/A' || isNaN(p95Value) || isNaN(failedRateValue)) {
     testStatus = 'INCOMPLETO/ERRO';
     statusColor = '#ffc107'; // Yellow (warning)
 } else if (thresholdDurationPassed && thresholdFailedPassed) {
