@@ -1,11 +1,13 @@
+// performance-tests/generate_k6_report.js
 const fs = require('fs');
 const path = require('path');
 
 const inputPath = path.join(__dirname, 'test_reports', 'k6', 'load_result.json');
-const outputPath = path.join(__dirname, 'test_reports', 'k6');
+const outputPath = path.join(__dirname, 'test_reports', 'k6'); // Onde o HTML será salvo
 const htmlFileName = 'k6_report.html';
 const htmlFilePath = path.join(outputPath, htmlFileName);
 
+// Garante que o diretório de saída exista antes de qualquer operação de escrita
 if (!fs.existsSync(outputPath)) {
     fs.mkdirSync(outputPath, { recursive: true });
 }
@@ -51,6 +53,7 @@ try {
     process.exit(1);
 }
 
+// --- Extração de Métricas (Mais robusta para N/A) ---
 const getMetricValue = (metricPath, decimals = 2) => {
     let value = k6Results;
     const parts = metricPath.split('.');
@@ -76,6 +79,7 @@ const vusMax = getMetricValue('metrics.vus.values.value', 0);
 const testRunDurationMs = getMetricValue('state.testRunDurationMs', 2) / 1000;
 
 
+// --- Determinar o status do teste com base nos thresholds ---
 let testStatus = 'UNKNOWN';
 let statusColor = '#6c757d'; // Gray (unknown)
 
@@ -97,6 +101,9 @@ if (isNaN(p95Value) || isNaN(failedRateValue)) {
 }
 
 
+// --- Conteúdo HTML do relatório ---
+// ATENÇÃO: As crases (backticks) ao redor dos nomes das métricas como 'http_req_duration'
+// foram removidas ou substituídas por aspas simples (') para evitar SyntaxError.
 const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -145,39 +152,20 @@ const htmlContent = `
             </thead>
             <tbody>
                 <tr>
-                    <td>Duração da Requisição (ms)</td>
-                    <td><span class="metric-value">${httpReqDurationAvg}</span></td>
-                    <td><span class="metric-value">${httpReqDurationP95}</span></td>
-                    <td><span class="metric-value">${httpReqFailedRate}</span>%</td>
-                </tr>
-            </tbody>
-        </table>
-        <h2>Thresholds Definidos</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Métrica</th>
-                    <th>Limite</th>
-                    <th>Valor Atual</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>`http_req_duration` (p95)</td>
+                    <td>'http_req_duration' (p95)</td> <!-- CORRIGIDO: Aspas simples usadas aqui -->
                     <td>&lt;500ms</td>
                     <td><span class="metric-value">${httpReqDurationP95}</span>ms</td>
                     <td class="${thresholdDurationPassed ? 'pass-status' : 'fail-status'}">${thresholdDurationPassed ? 'PASS' : 'FAIL'}</td>
                 </tr>
                 <tr>
-                    <td>`http_req_failed` (rate)</td>
+                    <td>'http_req_failed' (rate)</td> <!-- CORRIGIDO: Aspas simples usadas aqui -->
                     <td>&lt;1%</td>
                     <td><span class="metric-value">${httpReqFailedRate}</span>%</td>
                     <td class="${thresholdFailedPassed ? 'pass-status' : 'fail-status'}">${thresholdFailedPassed ? 'PASS' : 'FAIL'}</td>
                 </tr>
             </tbody>
         </table>
-        <p style="font-style: italic; margin-top: 20px;">Nota: Este relatório é gerado a partir dos resultados JSON do K6. Para detalhes completos, consulte o arquivo `load_result.json`.</p>
+        <p style="font-style: italic; margin-top: 20px;">Nota: Este relatório é gerado a partir dos resultados JSON do K6. Para detalhes completos, consulte o arquivo 'load_result.json'.</p>
     </div>
 </body>
 </html>
