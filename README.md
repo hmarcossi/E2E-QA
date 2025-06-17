@@ -57,7 +57,7 @@ E2E-QA/
 ## 🛠️ Tecnologias Utilizadas
 
 | Tipo de Teste | Ferramenta Principal | Linguagens | Plugins/Bibliotecas |
-| ------------ | ------------ |
+|:-------------:|:--------------------:|:----------:|:-------------------:|
 | Testes de API (Backend) | Cypress | JavaScript | mochawesome, mochawesome-merge, cypress-grep |
 | Testes E2E (Frontend) | Cypress | JavaScript | mochawesome, mochawesome-merge, cypress-grep, cypress-iframe |
 | Testes de Performance | K6 | JavaScript | k6-html-reporter |
@@ -97,7 +97,7 @@ Execução Individual de Módulos (Local)
 Todos os comandos devem ser executados a partir da raiz do projeto.
 
 | Comando npm | Descrição |
-|------------------|------------|
+|:------------------:|:------------:|
 | npm run api:dev | 🚀 Executa todos os testes de API (Backend) em modo headless (--env ENV=dev). |
 | npm run ui:dev | 💻 Executa todos os testes E2E (Frontend) em modo headless (--env ENV=dev). |
 | npm run k6:setup | ⚙️ Executa o script Cypress para setup de dados para o K6. |
