@@ -103,15 +103,7 @@ jobs:
           sudo mv k6-v*-linux-amd64/k6 /usr/local/bin
           k6 version
 
-      - name: Setup Go Environment
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22.x'
-
-      - name: Instalar k6-reporter
-        run: go install github.com/benc-uk/k6-reporter@latest
-
-      - name: Setup Node.js (para dependências npm)
+      - name: Setup Node.js (para o k6-reporter)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -127,16 +119,9 @@ jobs:
 
       - name: Executar Testes de Carga (K6)
         run: npm run k6:run
-        env:
-          K6_API_URL: https://serverest.dev
-          K6_FRONTEND_URL: https://front.serverest.dev
 
       - name: Gerar Relatório HTML do K6 com k6-reporter
-        run: |
-          # Garante que o diretório de destino exista
-          mkdir -p performance-tests/test_reports/k6/
-          # Gera o relatório a partir do JSON do K6. O binário k6-reporter estará em ~/go/bin/
-          ~/go/bin/k6-reporter --from=performance-tests/test_reports/k6/load_result.json --output=performance-tests/test_reports/k6/k6_report.html
+        run: npm run generate:k6-report
         if: always()
 
       - name: Publicar Relatório K6
@@ -145,6 +130,31 @@ jobs:
         with:
           name: relatorio-teste-carga
           path: performance-tests/test_reports/k6/k6_report.html
+
+  mobile-tests:
+    runs-on: ubuntu-latest
+    needs: setup-environment
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Instalar Dependências Mobile (Python & Appium)
+        run: npm install -g appium
+      - name: Iniciar Appium Server em background (Exemplo)
+        run: appium --base-path /wd/hub &
+      - name: Aguardar o Appium Server (Opcional, mas recomendado)
+        run: sleep 10
+      - name: Executar Testes Mobile (Robot Framework)
+        run: npm run test:mobile
+      - name: Publicar Relatórios do Robot Framework
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robot-framework-reports
+          path: mobile-tests/output
 
   resumo-relatorios:
     runs-on: ubuntu-latest
