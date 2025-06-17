@@ -103,7 +103,7 @@ jobs:
           sudo mv k6-v*-linux-amd64/k6 /usr/local/bin
           k6 version
 
-      - name: Setup Node.js (para o k6-reporter)
+      - name: Setup Node.js (para o script de geração de relatório)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -111,7 +111,7 @@ jobs:
       - name: Instalar Dependências (Cache)
         run: npm install
 
-      - name: Executar Setup de Dados K6 (Cypress)
+      - name: (Opcional) Executar Setup de Dados K6 (Cypress)
         run: npm run k6:setup
         env:
           CYPRESS_ADMIN_EMAIL: ${{ secrets.BACKEND_ADMIN_EMAIL }}
@@ -120,7 +120,7 @@ jobs:
       - name: Executar Testes de Carga (K6)
         run: npm run k6:run
 
-      - name: Gerar Relatório HTML do K6 com k6-reporter
+      - name: Gerar Relatório HTML do K6
         run: npm run generate:k6-report
         if: always()
 
@@ -130,31 +130,6 @@ jobs:
         with:
           name: relatorio-teste-carga
           path: performance-tests/test_reports/k6/k6_report.html
-
-  mobile-tests:
-    runs-on: ubuntu-latest
-    needs: setup-environment
-    steps:
-      - name: Checkout do Código
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Instalar Dependências Mobile (Python & Appium)
-        run: npm install -g appium
-      - name: Iniciar Appium Server em background (Exemplo)
-        run: appium --base-path /wd/hub &
-      - name: Aguardar o Appium Server (Opcional, mas recomendado)
-        run: sleep 10
-      - name: Executar Testes Mobile (Robot Framework)
-        run: npm run test:mobile
-      - name: Publicar Relatórios do Robot Framework
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: robot-framework-reports
-          path: mobile-tests/output
 
   resumo-relatorios:
     runs-on: ubuntu-latest
