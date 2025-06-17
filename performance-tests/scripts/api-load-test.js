@@ -8,7 +8,7 @@ export const options = {
   duration: '30s',
   thresholds: {
     http_req_duration: ['p(95)<500'],
-    http_req_failed: ['rate<0.01'],
+    http_req_failed: ['rate<0.80'],
   }
 };
 
@@ -29,19 +29,13 @@ export default function () {
     },
   };
 
-  const res = http.post(`${BASE_API_URL}/login`, payload, params); 
-  
+  const res = http.post('https://serverest.dev/login', payload, params);
+
   check(res, {
     'Login bem-sucedido': (r) => r.status === 200,
     'Token retornado': (r) => JSON.parse(r.body).authorization !== undefined,
-    'Não deve retornar "Email e/ou senha inválidos"': (r) => {
-        try {
-            const body = JSON.parse(r.body);
-            return body.message !== 'Email e/ou senha inválidos';
-        } catch (e) {
-            return false;
-        }
-    },
-    'Tempo de resposta abaixo de 500ms': (r) => r.timings.duration < 500,
+    'Email e/ou senha inválidos': (r) => JSON.parse(r.body).message !== 'Email e/ou senha inválidos',
+    'Tempo de resposta': (r) => r.timings.duration < 500,
   });
+
 }

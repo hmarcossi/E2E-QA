@@ -22,7 +22,7 @@ describe('Setup para k6 - Criação de usuários', () => {
       );
     });
 
-    cy.writeFile('../data/users.json', users);
+    cy.writeFile('performance-tests/data/users.json', users);
 
     users.forEach(user => {
       cy.request({

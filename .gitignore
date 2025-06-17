@@ -40,6 +40,7 @@ cypress/videos/
 cypress/screenshots/              
 
 # Diretórios de resultados e relatórios do K6
+performance-tests/data/
 performance-tests/test_reports/   
 
 
