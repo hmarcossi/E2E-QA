@@ -114,8 +114,11 @@ jobs:
       - name: Executar Testes de Carga (K6)
         uses: grafana/run-k6-action@v1
         with:
-          script: performance-tests/scripts/api-load-test.js
-          arguments: --summary-export=performance-tests/test_reports/k6/load_result.json
+          path: performance-tests/scripts/api-load-test.js
+          flags: >
+            --summary-export=performance-tests/test_reports/k6/load_result.json
+            --env K6_API_URL=${{ env.K6_API_URL }}
+            --env K6_FRONTEND_URL=${{ env.K6_FRONTEND_URL }}
         env:
           K6_API_URL: https://serverest.dev
           K6_FRONTEND_URL: https://front.serverest.dev
