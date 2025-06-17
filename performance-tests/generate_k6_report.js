@@ -179,7 +179,7 @@ const htmlContent = `
                 </tr>
                 <tr>
                     <td>'http_req_failed' (rate)</td>
-                    <td>&lt;10%</td>
+                    <td>&lt;80%</td>
                     <td><span class="metric-value">${httpReqFailedRate}</span>%</td>
                     <td class="${thresholdFailedPassed ? 'pass-status' : 'fail-status'}">${thresholdFailedPassed ? 'PASS' : 'FAIL'}</td>
                 </tr>

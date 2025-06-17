@@ -41,7 +41,7 @@ cypress/screenshots/
 
 # Diretórios de resultados e relatórios do K6
 performance-tests/data/
-performance-tests/test_reports/   
+performance-tests/test_reports/k6/*   
 
 
 # Diretórios de resultados e logs do Robot Framework

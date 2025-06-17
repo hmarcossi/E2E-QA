@@ -58,7 +58,7 @@ E2E-QA/
 
 | Tipo de Teste | Ferramenta Principal | Linguagens | Plugins/Bibliotecas |
 | ------------ | ------------ |
-| Testes de API (Backend) | Cypress | JavaScript | code mochawesome, mochawesome-merge, cypress-grep|
+| Testes de API (Backend) | Cypress | JavaScript | mochawesome, mochawesome-merge, cypress-grep |
 | Testes E2E (Frontend) | Cypress | JavaScript | mochawesome, mochawesome-merge, cypress-grep, cypress-iframe |
 | Testes de Performance | K6 | JavaScript | k6-html-reporter |
 | Testes Mobile | Robot Framework + Appium | Python | robotframework-appiumlibrary, Appium-Python-Client |
