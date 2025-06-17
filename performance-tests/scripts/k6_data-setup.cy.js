@@ -1,13 +1,11 @@
-// cypress/e2e/api/k6-data-setup.cy.js
 import { faker } from '@faker-js/faker';
-import { generateUserPayloadCreate } from '../factories/createUserPayload';
+import { generateUserPayloadCreate } from '../../factories/createUserPayload';
 
 describe('Setup para k6 - Criação de usuários', () => {
   it('Gerar usuários aleatórios para teste de carga', () => {
     const apiUrl = 'https://serverest.dev';
     const endPoint = '/usuarios';
     
-    // Gerar array de usuários
     const users = Array(10).fill().map(() => {
       const userData = {
         nome: faker.person.firstName(),
@@ -24,10 +22,8 @@ describe('Setup para k6 - Criação de usuários', () => {
       );
     });
 
-    // Salvar dados brutos para o k6
-    cy.writeFile('cypress/k6/data/users.json', users);
+    cy.writeFile('performance-tests/data/users.json', users);
 
-    // Opcional: Criar usuários na API (se necessário)
     users.forEach(user => {
       cy.request({
         method: 'POST',
@@ -37,7 +33,7 @@ describe('Setup para k6 - Criação de usuários', () => {
           'Accept': 'application/json',
         },
         body: user,
-        failOnStatusCode: false // Para não falhar se usuário já existir
+        failOnStatusCode: false
       });
     });
   });

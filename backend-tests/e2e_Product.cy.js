@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { generateUserPayloadCreate } from '../../factories/createUserPayload';
-import { generateProductPayloadCreate } from '../../factories/createProductPayload';
+import { generateUserPayloadCreate } from '../factories/createUserPayload';
+import { generateProductPayloadCreate } from '../factories/createProductPayload';
 
 describe('Testes E2E de Produto', () => {
     const apiUrl = `${Cypress.env("serverest").apiUrl}`;
@@ -77,7 +77,7 @@ describe('Testes E2E de Produto', () => {
     });
     
     it('Editar produto com sucesso', () => {
-        let responseProductList = []; //Cria uma lista para armazenar os produtos
+        let responseProductList = [];
         const payload = generateProductPayloadCreate(
                 nomeProduct,
                 precoProduct,
@@ -88,18 +88,18 @@ describe('Testes E2E de Produto', () => {
                 precoProduct + 20,
                 `${descricaoProduct} Editado`,
                 quantidadeProdut * 5);
-        //Primeira requisição para criar um produto
+
         cy.createUserGetToken(nomeUser, emailUser, passUser, admin).then(({token}) => {
             cy.createProduct(token, apiUrl, endPoint, payload)
                 cy.getProduct(payload.nome).then((responseOriginal) => {
-                    responseProductList.push(responseOriginal.body.produtos[0]); //Adiciona o produto criado na lista 
-        //Segunda requisição para editar o produto criado    
+                    responseProductList.push(responseOriginal.body.produtos[0]); 
+
                 let idProduct = responseOriginal.body.produtos[0]._id;
                 cy.updateProduct(token, idProduct, payloadEdit).then((responseUpdate) => {
                     expect(responseUpdate.status).to.eq(200);
                     expect(responseUpdate.body.message).to.eq("Registro alterado com sucesso");
                     cy.getProduct(payloadEdit.nome).then((responseProductEditado) => {
-                        responseProductList.push(responseProductEditado.body.produtos[0]); //Adiciona o produto editado na lista
+                        responseProductList.push(responseProductEditado.body.produtos[0]);
                         //Comparação dos produtos
                         expect(responseProductList[0]._id).to.eq(responseProductList[1]._id);
                         expect(responseProductList[0].nome).not.eq(responseProductList[1].nome);

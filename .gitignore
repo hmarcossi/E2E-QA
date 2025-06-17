@@ -1,0 +1,74 @@
+# Node.js e gerenciadores de pacotes
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.nyc_output/
+.temp/
+
+# Log files
+*.log
+
+# Ambiente local e variáveis de ambiente
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs e editores de código
+.idea/
+.vscode/
+*.swp
+*.bak
+*~
+.DS_Store
+
+# Build artifacts e diretórios de distribuição
+build/
+dist/
+out/
+tmp/
+
+# Diretórios de resultados e artefatos de execução do Cypress
+cypress-screenshots/
+cypress-videos/
+cypress-results/                  
+mochawesome-report/               
+cypress/results/                  
+cypress/videos/                   
+cypress/screenshots/              
+
+# Diretórios de resultados e relatórios do K6
+performance-tests/data/
+performance-tests/test_reports/k6/*   
+
+
+# Diretórios de resultados e logs do Robot Framework
+mobile-tests/output/              
+mobile-tests/app/*.apk            
+mobile-tests/node_modules/        
+
+# Python virtual environment
+.venv/
+env/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Relatórios Consolidados (gerados pelo CI)
+consolidated_reports/             
+
+# Ferramentas de CI/CD locais (act)
+.act                              
+
+# Outros arquivos temporários
+*.tmp
+*.bak
+*.old
+*.obj
+*.exe
+*.dll
+*.so
+*.o
