@@ -111,6 +111,9 @@ jobs:
           CYPRESS_ADMIN_EMAIL: ${{ secrets.BACKEND_ADMIN_EMAIL }}
           CYPRESS_ADMIN_PASSWORD: ${{ secrets.BACKEND_ADMIN_PASSWORD }}
 
+      - name: Criar Diretório de Relatórios K6
+        run: mkdir -p performance-tests/test_reports/k6/
+
       - name: Executar Testes de Carga (K6)
         uses: grafana/run-k6-action@v1
         with:
