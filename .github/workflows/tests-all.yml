@@ -103,7 +103,15 @@ jobs:
           sudo mv k6-v*-linux-amd64/k6 /usr/local/bin
           k6 version
 
-      - name: Setup Node.js (para generate_k6_report.js)
+      - name: Setup Go Environment
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Instalar k6-reporter
+        run: go install github.com/benc-uk/k6-reporter@latest
+
+      - name: Setup Node.js (para dependências npm)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -123,6 +131,14 @@ jobs:
           K6_API_URL: https://serverest.dev
           K6_FRONTEND_URL: https://front.serverest.dev
 
+      - name: Gerar Relatório HTML do K6 com k6-reporter
+        run: |
+          # Garante que o diretório de destino exista
+          mkdir -p performance-tests/test_reports/k6/
+          # Gera o relatório a partir do JSON do K6. O binário k6-reporter estará em ~/go/bin/
+          ~/go/bin/k6-reporter --from=performance-tests/test_reports/k6/load_result.json --output=performance-tests/test_reports/k6/k6_report.html
+        if: always()
+
       - name: Publicar Relatório K6
         uses: actions/upload-artifact@v4
         if: always()
@@ -137,33 +153,27 @@ jobs:
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
-
       - name: Setup Node.js para script de consolidação
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Download Relatório Backend
         uses: actions/download-artifact@v4
         with:
           name: relatorio-testes-backend
           path: consolidated_reports/backend
-
       - name: Download Relatório Frontend
         uses: actions/download-artifact@v4
         with:
           name: relatorio-testes-frontend
           path: consolidated_reports/frontend
-
       - name: Download Relatório Teste de Carga
         uses: actions/download-artifact@v4
         with:
           name: relatorio-teste-carga
           path: consolidated_reports/performance
-
       - name: Gerar Relatório Consolidado
         run: npm run generate:consolidated-report
-      
       - name: Fazer upload do resumo consolidado
         uses: actions/upload-artifact@v4
         with:
