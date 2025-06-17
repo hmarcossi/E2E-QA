@@ -115,17 +115,15 @@ jobs:
         run: mkdir -p performance-tests/test_reports/k6/
 
       - name: Executar Testes de Carga (K6) e Exportar Resumo
-        uses: grafana/run-k6-action@v1
-        with:
-          path: performance-tests/scripts/api-load-test.js
-          flags: >
-            --summary-export=/github/workspace/performance-tests/test_reports/k6/load_result.json
-            --env K6_API_URL=${{ env.K6_API_URL }}
-            --env K6_FRONTEND_URL=${{ env.K6_FRONTEND_URL }}
+        run: |
+          k6 run performance-tests/scripts/api-load-test.js \
+          --summary-export=performance-tests/test_reports/k6/load_result.json \
+          --env K6_API_URL=${{ env.K6_API_URL }} \
+          --env K6_FRONTEND_URL=${{ env.K6_FRONTEND_URL }}
         env:
           K6_API_URL: https://serverest.dev
           K6_FRONTEND_URL: https://front.serverest.dev
-        
+
       - name: Gerar Relatório HTML do K6
         run: npm run generate:k6-report
         if: always()
